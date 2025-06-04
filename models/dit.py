@@ -731,7 +731,7 @@ class DIT(nn.Module, huggingface_hub.PyTorchModelHubMixin):
     if sigma is None:
       t_cond = None
     else:
-      t_cond = F.silu(self.sigma_map(sigma))
+      t_cond = F.silu(self.sigma_map(sigma))  # only influence of sigma
 
     cross_attn = hasattr(self, 'block_diff_mask')
     if cross_attn:

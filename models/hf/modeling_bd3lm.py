@@ -334,11 +334,11 @@ class DDiTBlock(nn.Module):
   def get_qkv(self, x, rotary_cos_sin, store_kv=False):
     # compute qkv (potentially use cache)
     if self.kv_cache is not None:
-      new_qkv = self.attn_qkv(x)
-      self.kv_cache[:, self.cache_idx:self.cache_idx+self.block_size] = new_qkv
-      qkv = self.kv_cache[:, :self.cache_idx+self.block_size].clone()
+      new_qkv = self.attn_qkv(x)  # QKV weight projection
+      self.kv_cache[:, self.cache_idx:self.cache_idx+self.block_size] = new_qkv  # save new KV to cache
+      qkv = self.kv_cache[:, :self.cache_idx+self.block_size].clone()  # load KV from cache (including the new KV)
     else:
-      qkv = self.attn_qkv(x)
+      qkv = self.attn_qkv(x)  # QKV weight projection
     # store kv cache in a sliding window (can't exceed context len)
     if store_kv:
       self.cache_idx += self.block_size
@@ -482,7 +482,7 @@ class DITBackbone(nn.Module):
     self.cross_attn = config.cross_attn
     self.block_size = config.block_size
     self.vocab_size = config.vocab_size
-    self.n = config.model_length
+    self.n = config.model_length  # 1024
 
     self.vocab_embed = EmbeddingLayer(
       config.hidden_dim,
@@ -540,7 +540,7 @@ class DITBackbone(nn.Module):
     if not self.config.time_conditioning and self.adaln:
       sigma = torch.zeros_like(sigma)
     all_hidden_states = []
-    x = self.vocab_embed(indices)
+    x = self.vocab_embed(indices)  # x: (N, H, V)
     if output_hidden_states:
       all_hidden_states.append(x)
     c = None

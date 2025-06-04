@@ -64,7 +64,7 @@ class Diffusion(L.LightningModule):
       self.block_size = self.config.block_size
     else:
       self.block_size = self.config.model.length
-    if self.parameterization == 'ar':
+    if self.parameterization == 'ar':  # AR = block size 1
       self.block_size = 1
     if self.config.algo.backbone == 'dit':
       self.backbone = models.dit.DIT(
@@ -313,7 +313,7 @@ class Diffusion(L.LightningModule):
     sigma = sigma.mean(-1).squeeze()
     if sigma.ndim == 0:
       sigma = sigma.unsqueeze(0)
-    if not self.time_conditioning:
+    if not self.time_conditioning:  # if not using time conditioning, set sigma to 0
       sigma = torch.zeros_like(sigma)
     assert sigma.ndim == 1, sigma.shape
     return sigma
@@ -564,7 +564,7 @@ class Diffusion(L.LightningModule):
     move_chance_s = move_chance_s[:, None]
     mask_prob = move_chance_s / move_chance_t
 
-    if p_x0 is None:
+    if p_x0 is None:  # compute p_x0 (update p_x0)
       if self.config.sampling.kv_cache:
         p_x0 = self.forward(x[:, -self.block_size:],
                         sigma_t,
@@ -588,18 +588,18 @@ class Diffusion(L.LightningModule):
     else:
       q_xs = p_x0 * (1 - mask_prob)
       q_xs[:, :, self.mask_index] = mask_prob.squeeze(-1)
-      x_block = _sample_categorical(q_xs)
-    copy_flag = (x[:, -self.block_size:] != self.mask_index).to(x.dtype)
-    x_block =  copy_flag * x[:, -self.block_size:] + (1 - copy_flag) * x_block
+      x_block = _sample_categorical(q_xs)  # a single token is sampled
+    copy_flag = (x[:, -self.block_size:] != self.mask_index).to(x.dtype)  # 1 if not masked, 0 if masked
+    x_block =  copy_flag * x[:, -self.block_size:] + (1 - copy_flag) * x_block  # split at "+"; retain the original unmasked tokens, replace the masked tokens with the sampled token
     x_new = torch.cat((x[:, :-self.block_size], x_block), dim=-1)
 
     # compute kv cache if all tokens in a block are sampled
     if self.config.sampling.kv_cache and self.mask_index not in x_block:
       _ = self.forward(x_block, sigma_t, sample_mode=True, store_kv=True)
 
-    if not torch.allclose(x_new, x):
+    if not torch.allclose(x_new, x):  # x_new and x are different
       return None, x_new
-    else:
+    else:  # x_new and x are the same
       return p_x0, x_new
 
   @torch.no_grad()
@@ -997,7 +997,7 @@ class Diffusion(L.LightningModule):
 
     for stride_num in tqdm(range(num_strides)):
       # sample next block
-      if stride_num == 0:
+      if stride_num == 0:  # first block (= first stride)
         x_accum = self._sample_prior(n_samples, self.block_size).to(self.device)
         x_accum[:, 0] = self.tokenizer.bos_token_id
       else:
@@ -1018,7 +1018,7 @@ class Diffusion(L.LightningModule):
       p_x0_cache = None
       timesteps = torch.linspace(1, 0, num_steps, device=self.device)
       t = 1
-      for i in range(num_steps):
+      for i in range(num_steps):  # diffusion steps
         if self.mask_index not in x_accum:
           break
 
@@ -1032,12 +1032,12 @@ class Diffusion(L.LightningModule):
           t = timesteps[i]
 
         p_x0_cache, x_next = self._ddpm_caching_update(
-            x=x_accum[:, fwd_idx],
+            x=x_accum[:, fwd_idx],  # sliced to the context window
             t=t * ones,
             dt=dt,
             p_x0=p_x0_cache,)
         if p_x0_cache is None:
-          sampling_steps += 1
+          sampling_steps += 1  # IMO sampling steps is just for logging (not used in calculation)
        
         x_accum[:, fwd_idx] = x_next
 
