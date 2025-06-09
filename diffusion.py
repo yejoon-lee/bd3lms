@@ -999,7 +999,10 @@ class Diffusion(L.LightningModule):
       # sample next block
       if stride_num == 0:  # first block (= first stride)
         x_accum = self._sample_prior(n_samples, self.block_size).to(self.device)
-        x_accum[:, 0] = self.tokenizer.bos_token_id
+        # conditional sampling
+        prompt = torch.tensor([12473, 4663, 3843, 11, 16849, 357, 12637, 8, 532, 1992, 3759, 1301, 531], device=self.device, dtype=torch.long)
+        x_accum[:, : len(prompt)] = prompt
+        # x_accum[:, 0] = self.tokenizer.bos_token_id
       else:
         if mdlm_semi_ar:
           x = self._sample_prior(n_samples, 512).to(self.device)

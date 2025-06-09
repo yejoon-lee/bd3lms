@@ -212,6 +212,13 @@ def main(config):
   logger = utils.get_logger(__name__)
   tokenizer = dataloader.get_tokenizer(config)
 
+  print(tokenizer.encode("<|endoftext|>"))
+
+  # Print tokenized result of example text
+  example_text = "BEIRUT, Lebanon (Reuters) - President Donald Trump said"
+  token_ids = tokenizer.encode(example_text)
+  print(f"Tokenized result: {token_ids}")
+
   if config.mode == 'sample_eval':
     config.wandb = None
     samples = generate_samples(config, logger, tokenizer)
